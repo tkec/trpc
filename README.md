@@ -1,2 +1,2 @@
 # trpc
-rpc test
+rpc test, inspired from brpc
