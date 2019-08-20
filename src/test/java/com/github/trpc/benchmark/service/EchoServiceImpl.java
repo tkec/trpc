@@ -1,17 +1,22 @@
-package com.github.trpc.service;
+package com.github.trpc.benchmark.service;
 
 import com.github.trpc.common.exception.RpcException;
+import com.github.trpc.test.service.User;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class EchoServiceImpl implements EchoService {
     @Override
     public String echo(String msg) {
-        String result = "EchoService from Server: " + msg + ", " + new Date();
-        log.info("server send result:" + result);
-        return result;
+        try {
+            TimeUnit.MILLISECONDS.sleep(100);
+        } catch (InterruptedException e) {
+
+        }
+        return msg;
     }
 
     @Override

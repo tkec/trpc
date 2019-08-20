@@ -14,9 +14,13 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.ResourceLeakDetector;
 import io.netty.util.Timeout;
 import io.netty.util.Timer;
+import io.netty.util.internal.logging.InternalLogLevel;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.net.InetSocketAddress;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 
 @Slf4j
@@ -41,6 +46,7 @@ public class RpcClient {
     private Endpoint endpoint;
     private Channel channel;
     private LongAdder idGen = new LongAdder();
+    // private AtomicLong idGen = new AtomicLong();
     private AtomicBoolean start = new AtomicBoolean(false);
 
 
@@ -70,11 +76,13 @@ public class RpcClient {
         final ChannelInitializer<SocketChannel> initializer = new ChannelInitializer<SocketChannel>() {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
+                // ch.pipeline().addLast("logging", new LoggingHandler(LogLevel.INFO));
                 ch.pipeline().addLast(new IdleStateHandler(0, 0, 60));
                 ch.pipeline().addLast(new IdleChannelHandler());
                 ch.pipeline().addLast(rpcClientHandler);
             }
         };
+        // ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.ADVANCED);
         bootstrap.group(ioThreadPool).handler(initializer);
     }
 
@@ -82,7 +90,12 @@ public class RpcClient {
         if (!isActive(channel)) {
             synchronized (this) {
                 if (!isActive(channel)) {
-                    channel = createChannel(endpoint.getHost(), endpoint.getPort());
+                    log.info("reconnect to server");
+                    Channel newChannel = createChannel(endpoint.getHost(), endpoint.getPort());
+                    if (channel != null ) {
+                        channel.close();
+                    }
+                    channel = newChannel;
                 }
             }
         }
@@ -122,18 +135,21 @@ public class RpcClient {
 
     public RpcFuture sendRequest(Request request, Channel channel) {
         RpcFuture rpcFuture = new RpcFuture();
-        rpcFuture.setRpcClient(this);
+//        rpcFuture.setRpcClient(this);
 
         idGen.increment();
         Long id = idGen.longValue();
+     //   Long id = idGen.incrementAndGet();
         request.setId(id);
         requestFutureMap.put(id, rpcFuture);
         RpcTimeoutTimer rpcTimeoutTimer = new RpcTimeoutTimer(this, id);
-        Timeout timeout = timeoutTimer.newTimeout(rpcTimeoutTimer, 1000, TimeUnit.MILLISECONDS);
+        Timeout timeout = timeoutTimer.newTimeout(rpcTimeoutTimer, 200000, TimeUnit.MILLISECONDS);
         rpcFuture.setTimeout(timeout);
 
         try {
             ByteBuf byteBuf = protocol.encodeRequest(request);
+            log.debug("send result to server. id=" + request.getId()
+                    + ", channel=" + channel + ", active=" + channel.isActive());
             ChannelFuture sendFuture = channel.writeAndFlush(byteBuf);
             sendFuture.awaitUninterruptibly();
             if (!sendFuture.isSuccess()) {

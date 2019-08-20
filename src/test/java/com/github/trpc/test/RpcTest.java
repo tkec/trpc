@@ -1,12 +1,12 @@
-package com.github.trpc;
+package com.github.trpc.test;
 
 import com.github.trpc.client.RpcClient;
 import com.github.trpc.client.RpcProxy;
 import com.github.trpc.common.exception.RpcException;
 import com.github.trpc.server.RpcServer;
-import com.github.trpc.service.EchoService;
-import com.github.trpc.service.EchoServiceImpl;
-import com.github.trpc.service.User;
+import com.github.trpc.test.service.EchoService;
+import com.github.trpc.test.service.EchoServiceImpl;
+import com.github.trpc.test.service.User;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 

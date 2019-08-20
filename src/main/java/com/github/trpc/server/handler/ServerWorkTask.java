@@ -5,6 +5,7 @@ import com.github.trpc.common.protocol.Request;
 import com.github.trpc.common.protocol.Response;
 import com.github.trpc.server.RpcServer;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +41,7 @@ public class ServerWorkTask implements Runnable {
             if (targetThrowable == null) {
                 targetThrowable = e;
             }
-            String errMsg = String.format("invoke method fail, msg=%s", e.getLocalizedMessage());
+            String errMsg = String.format("invoke method fail, msg=%s", targetThrowable.getLocalizedMessage());
             RpcException rpcException = new RpcException(RpcException.SERVICE_EXCEPTION, errMsg);
             response.setException(rpcException);
         } catch (Throwable e2) {
@@ -52,8 +53,10 @@ public class ServerWorkTask implements Runnable {
         // send response
         try {
             ByteBuf byteBuf = rpcServer.getProtocol().encodeResponse(response);
-            ctx.channel().writeAndFlush(byteBuf);
-            log.debug("send result to client success.");
+            ChannelFuture channelFuture = ctx.channel().writeAndFlush(byteBuf);
+            channelFuture.syncUninterruptibly();
+            log.debug("send result to client success. id=" + response.getId()
+                    + ", channel=" + ctx.channel() + ", active=" + ctx.channel().isActive() + ", success=" + channelFuture.isSuccess());
         } catch (Exception e) {
             log.error("send response error", e);
         }

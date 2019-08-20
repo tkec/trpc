@@ -73,12 +73,30 @@ public class RpcProxy implements MethodInterceptor {
             request.setArgs(args);
 
             Response response = rpcClient.getProtocol().createResponse();
-            invokeRpc(request, response);
-            if (response.getException() != null) {
-                throw new RpcException(response.getException());
+            int maxRetryTimes = 1;
+            int currentTryTime = 1;
+            while (currentTryTime <= maxRetryTimes) {
+                try {
+                    invokeRpc(request, response);
+                    log.debug(currentTryTime + " call id=" + request.getId());
+                    break;
+                } catch (Exception e) {
+                    log.error("send request error", e);
+                } finally {
+                    currentTryTime++;
+                }
+            }
+
+            if (response.getResult() == null) {
+                if (response.getException() != null) {
+                    throw new RpcException(response.getException());
+                } else {
+                    throw new RpcException("unknown exception");
+                }
             }
             return response.getResult();
         } catch (Exception e) {
+            e.printStackTrace();
             throw new RpcException(e.getMessage());
         }
     }
@@ -90,7 +108,7 @@ public class RpcProxy implements MethodInterceptor {
 
     protected void rpcCore(Request request, Channel channel, Response response) throws Exception {
         RpcFuture rpcFuture = rpcClient.sendRequest(request, channel);
-        response.setResult(rpcFuture.get(1000, TimeUnit.MILLISECONDS));
+        response.setResult(rpcFuture.get(200000, TimeUnit.MILLISECONDS));
     }
 
     protected RpcProxy(RpcClient rpcClient, Class clazz) {

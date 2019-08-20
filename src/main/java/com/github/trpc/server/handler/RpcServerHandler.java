@@ -1,5 +1,6 @@
 package com.github.trpc.server.handler;
 
+import com.github.trpc.common.ChannelInfo;
 import com.github.trpc.common.exception.BadSchemaException;
 import com.github.trpc.common.exception.NotEnoughDataException;
 import com.github.trpc.common.exception.RpcException;
@@ -28,6 +29,7 @@ public class RpcServerHandler extends SimpleChannelInboundHandler<Object> {
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         log.debug("channel is active, ch=" + ctx.channel());
+        ChannelInfo channelInfo = ChannelInfo.getOrCreateServerChannelInfo(ctx.channel());
         super.channelActive(ctx);
     }
 
@@ -39,39 +41,51 @@ public class RpcServerHandler extends SimpleChannelInboundHandler<Object> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
-        log.info("receive client request.");
-        ByteBuf in = (ByteBuf)msg;
-        while (in.readableBytes() > 0) {
-            try {
-                Request request = rpcServer.getProtocol().decodeRequest(in);
-                Response response = rpcServer.getProtocol().createResponse();
-                RpcMethodInfo rpcMethodInfo = ServiceManager.getInstance().
-                        getService(request.getServiceName(), request.getMethodName());
-                if (request == null || rpcMethodInfo == null) {
-                    try {
-                        String errMsg = String.format("fail to find service=%s, method=%s",
-                                request.getServiceName(), request.getMethodName());
-                        log.error(errMsg);
-                        RpcException exception = new RpcException(RpcException.SERVICE_EXCEPTION, errMsg);
-                        response.setException(exception);
-                        ByteBuf byteBuf = rpcServer.getProtocol().encodeResponse(response);
-                        ctx.channel().writeAndFlush(byteBuf);
-                    } catch (Exception e) {
-                        log.error("send response fail, " + e.getLocalizedMessage());
-                    }
-                    return;
-                }
-                request.setRpcMethodInfo(rpcMethodInfo);
-                rpcServer.getWorkThreadPool().submit(new ServerWorkTask(rpcServer, request, response, ctx));
-            } catch (NotEnoughDataException e1) {
-                break;
-            } catch (TooBigDataException e2) {
-                e2.printStackTrace();
-                throw new RpcException(RpcException.SERIALIZATION_EXCEPTION, e2);
-            } catch (BadSchemaException e3) {
-                e3.printStackTrace();
-                throw new RpcException(RpcException.SERIALIZATION_EXCEPTION, e3);
+        log.debug("receive client request.");
+        try {
+            ChannelInfo channelInfo = ChannelInfo.getServerChannelInfo(ctx.channel());
+            ByteBuf in = (ByteBuf) msg;
+            if (in.readableBytes() > 0) {
+                channelInfo.getRecvBuf().addBuffer(in.retain());
             }
+
+            while (channelInfo.getRecvBuf().readableBytes() > 0) {
+                log.debug("recv buf readindex:" + channelInfo.getRecvBuf().readableBytes());
+                try {
+                    Request request = rpcServer.getProtocol().decodeRequest(channelInfo.getRecvBuf());
+                    log.debug("receive client request. id=" + request.getId());
+                    Response response = rpcServer.getProtocol().createResponse();
+                    RpcMethodInfo rpcMethodInfo = ServiceManager.getInstance().
+                            getService(request.getServiceName(), request.getMethodName());
+                    if (request == null || rpcMethodInfo == null) {
+                        try {
+                            String errMsg = String.format("fail to find service=%s, method=%s",
+                                    request.getServiceName(), request.getMethodName());
+                            log.error(errMsg);
+                            RpcException exception = new RpcException(RpcException.SERVICE_EXCEPTION, errMsg);
+                            response.setException(exception);
+                            ByteBuf byteBuf = rpcServer.getProtocol().encodeResponse(response);
+                            ctx.channel().writeAndFlush(byteBuf);
+                        } catch (Exception e) {
+                            log.error("send response fail, " + e.getLocalizedMessage());
+                        }
+                        return;
+                    }
+                    request.setRpcMethodInfo(rpcMethodInfo);
+                    rpcServer.getWorkThreadPool().submit(new ServerWorkTask(rpcServer, request, response, ctx));
+                } catch (NotEnoughDataException e1) {
+                    return;
+                } catch (TooBigDataException e2) {
+                    e2.printStackTrace();
+                    throw new RpcException(RpcException.SERIALIZATION_EXCEPTION, e2);
+                } catch (BadSchemaException e3) {
+                    e3.printStackTrace();
+                    throw new RpcException(RpcException.SERIALIZATION_EXCEPTION, e3);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RpcException(RpcException.SERIALIZATION_EXCEPTION, e);
         }
     }
 
@@ -80,6 +94,4 @@ public class RpcServerHandler extends SimpleChannelInboundHandler<Object> {
         log.error("exception happened, ch=" + ctx.channel() + ",ex=" + cause.getLocalizedMessage());
         ctx.close();
     }
-
-
 }

@@ -1,5 +1,6 @@
 package com.github.trpc.common.protocol;
 
+import com.github.trpc.common.DynamicCompositeByteBuf;
 import com.github.trpc.common.exception.BadSchemaException;
 import com.github.trpc.common.exception.NotEnoughDataException;
 import com.github.trpc.common.exception.TooBigDataException;
@@ -179,6 +180,9 @@ public class RpcProtocol implements Protocol {
             objectInputStream = new ObjectInputStream(byteArrayInputStream);
             Object object = objectInputStream.readObject();
             return object;
+        } catch (Exception e) {
+           e.printStackTrace();
+           return null;
         } finally {
             if (byteArrayInputStream != null) {
                 try {
@@ -205,49 +209,185 @@ public class RpcProtocol implements Protocol {
      */
     private Map<String, Object> getRpcMap(ByteBuf byteBuf) throws Exception {
         if (byteBuf.readableBytes() < FIXED_LEN) {
+            log.error("in head readable not enough: " + byteBuf.readableBytes());
             throw new NotEnoughDataException();
         }
         ByteBuf headBuf = byteBuf.readBytes(FIXED_LEN);
-        byte[] magic = new byte[4];
-        headBuf.readBytes(magic);
-        if (!Arrays.equals(magic, MAGIC_HEAD)) {
-            throw new BadSchemaException();
+        ByteBuf metaByteBuf = null;
+        ByteBuf bodyByteBuf = null;
+        try {
+            byte[] magic = new byte[4];
+            headBuf.readBytes(magic);
+            if (!Arrays.equals(magic, MAGIC_HEAD)) {
+                log.warn("bad schema, get: {}, need: {}", new String(magic), "TRPC");
+                throw new BadSchemaException();
+            }
+            int bodySize = headBuf.readInt();
+            if (byteBuf.readableBytes() < bodySize) {
+                log.error("in body readable not enough: " + byteBuf.readableBytes());
+                throw new NotEnoughDataException();
+            }
+            if (bodySize > 512 * 1024 * 1024) {
+                log.error("in body len bad, bodySize: " + bodySize);
+                throw new TooBigDataException();
+            }
+            int metaSize = headBuf.readInt();
+            log.debug("head info, magic={}, bodySize={}, metaSize={}", new String(magic), bodySize, metaSize);
+            if (metaSize > bodySize) {
+                log.error("in body bad, bodySize: " + bodySize + ", metaSize:" + metaSize);
+                throw new BadSchemaException();
+            }
+            metaByteBuf = byteBuf.readBytes(metaSize);
+            bodyByteBuf = null;
+            Object body = null;
+            RpcProto.RpcMeta rpcMeta = null;
+
+            try {
+                if (bodySize > metaSize) {
+                    bodyByteBuf = byteBuf.readRetainedSlice(bodySize - metaSize);
+                    body = getObjectByByteBuf(bodyByteBuf);
+                }
+                final int len = metaByteBuf.readableBytes();
+                byte[] metaBytes = new byte[len];
+                metaByteBuf.readBytes(metaBytes, 0, len);
+                rpcMeta = RpcProto.RpcMeta.getDefaultInstance()
+                        .getParserForType().parseFrom(metaBytes);
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new BadSchemaException();
+            }
+
+            Map<String, Object> rpcMap = new HashMap<>();
+            rpcMap.put("rpcMeta", rpcMeta);
+            rpcMap.put("body", body);
+            return rpcMap;
+        } finally {
+            if (headBuf != null) {
+                headBuf.release();
+            }
+            if (metaByteBuf != null) {
+                metaByteBuf.release();
+            }
+            if (bodyByteBuf != null) {
+                bodyByteBuf.release();
+            }
         }
-        int bodySize = headBuf.readInt();
-        if (byteBuf.readableBytes() < bodySize) {
+    }
+
+
+    @Override
+    public Request decodeRequest(DynamicCompositeByteBuf byteBuf) throws Exception {
+        Map<String, Object> rpcMap = getRpcMap2(byteBuf);
+        RpcProto.RpcMeta rpcMeta = (RpcProto.RpcMeta)rpcMap.get("rpcMeta");
+        Object body = rpcMap.get("body");
+
+        Request request = new RpcRequest();
+
+        RpcProto.RpcRequestMeta rpcRequestMeta = rpcMeta.getRequest();
+        Object[] args = (Object[])body;
+
+        request.setId(rpcMeta.getId());
+        request.setServiceName(rpcRequestMeta.getServiceName());
+        request.setMethodName(rpcRequestMeta.getMethodName());
+        request.setArgs(args);
+
+        log.debug("decode request: " + request);
+        return request;
+    }
+
+    @Override
+    public Response decodeResponse(DynamicCompositeByteBuf byteBuf) throws Exception {
+        Map<String, Object> rpcMap = getRpcMap2(byteBuf);
+        RpcProto.RpcMeta rpcMeta = (RpcProto.RpcMeta)rpcMap.get("rpcMeta");
+        Object body = rpcMap.get("body");
+
+        Response response = new RpcResponse();
+        RpcProto.RpcResponseMeta rpcResponseMeta = rpcMeta.getResponse();
+
+        response.setId(rpcMeta.getId());
+        int errorCode = rpcResponseMeta.getErrorCode();
+        if (errorCode != 0) {
+            response.setException(new Exception(rpcResponseMeta.getErrorMsg()));
+        }
+        response.setResult(body);
+        log.debug("decode response: " + response);
+        return response;
+    }
+
+    /**
+     * 解析header及body
+     * @param byteBuf
+     * @return
+     * @throws Exception
+     */
+    private Map<String, Object> getRpcMap2(DynamicCompositeByteBuf byteBuf) throws Exception {
+        if (byteBuf.readableBytes() < FIXED_LEN) {
+            log.debug("in head readable not enough: " + byteBuf.readableBytes());
             throw new NotEnoughDataException();
         }
-        if (bodySize > 512 * 1024 * 1024) {
-            throw new TooBigDataException();
-        }
-        int metaSize = headBuf.readInt();
-        log.debug("head info, magic={}, bodySize={}, metaSize={}", new String(magic), bodySize, metaSize);
-        if (metaSize > bodySize) {
-            throw new BadSchemaException();
-        }
-        ByteBuf metaByteBuf = byteBuf.readBytes(metaSize);
+        // 使用retainedSlice，不更新readerIndex
+        ByteBuf headBuf = byteBuf.retainedSlice(FIXED_LEN);
+        ByteBuf metaByteBuf = null;
         ByteBuf bodyByteBuf = null;
-        Object body = null;
-        RpcProto.RpcMeta rpcMeta = null;
-
         try {
-            if (bodySize > metaSize) {
-                bodyByteBuf = byteBuf.readBytes(bodySize - metaSize);
-                body = getObjectByByteBuf(bodyByteBuf);
+            byte[] magic = new byte[4];
+            headBuf.readBytes(magic);
+            if (!Arrays.equals(magic, MAGIC_HEAD)) {
+                log.warn("bad schema, get: {}, need: {}", new String(magic), "TRPC");
+                throw new BadSchemaException();
             }
-            final int len = metaByteBuf.readableBytes();
-            byte[] metaBytes = new byte[len];
-            metaByteBuf.readBytes(metaBytes, 0, len);
-            rpcMeta = RpcProto.RpcMeta.getDefaultInstance()
-                    .getParserForType().parseFrom(metaBytes);
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new BadSchemaException();
-        }
+            int bodySize = headBuf.readInt();
+            if (byteBuf.readableBytes() < bodySize + FIXED_LEN) {
+                log.debug("in body readable not enough: " + byteBuf.readableBytes());
+                throw new NotEnoughDataException();
+            }
+            if (bodySize > 512 * 1024 * 1024) {
+                log.debug("in body len bad, bodySize: " + bodySize);
+                throw new TooBigDataException();
+            }
+            int metaSize = headBuf.readInt();
+            log.debug("head info, magic={}, bodySize={}, metaSize={}", new String(magic), bodySize, metaSize);
+            if (metaSize > bodySize) {
+                log.error("in body bad, bodySize: " + bodySize + ", metaSize:" + metaSize);
+                throw new BadSchemaException();
+            }
+            // 前面head没有调整readerindex，如果header没问题，就调整buf的readerindex
+            byteBuf.skipBytes(FIXED_LEN);
+            metaByteBuf = byteBuf.readRetainedSlice(metaSize);
+            bodyByteBuf = null;
+            Object body = null;
+            RpcProto.RpcMeta rpcMeta = null;
 
-        Map<String, Object> rpcMap = new HashMap<>();
-        rpcMap.put("rpcMeta", rpcMeta);
-        rpcMap.put("body", body);
-        return rpcMap;
+            try {
+                if (bodySize > metaSize) {
+                    log.debug("bodySize:" + bodySize + ", metaSize:" + metaSize + ", readable:" + byteBuf.readableBytes());
+                    bodyByteBuf = byteBuf.readRetainedSlice(bodySize - metaSize);
+                    body = getObjectByByteBuf(bodyByteBuf);
+                }
+                final int len = metaByteBuf.readableBytes();
+                byte[] metaBytes = new byte[len];
+                metaByteBuf.readBytes(metaBytes, 0, len);
+                rpcMeta = RpcProto.RpcMeta.getDefaultInstance()
+                        .getParserForType().parseFrom(metaBytes);
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new BadSchemaException();
+            }
+
+            Map<String, Object> rpcMap = new HashMap<>();
+            rpcMap.put("rpcMeta", rpcMeta);
+            rpcMap.put("body", body);
+            return rpcMap;
+        } finally {
+            if (headBuf != null) {
+                headBuf.release();
+            }
+            if (metaByteBuf != null) {
+                metaByteBuf.release();
+            }
+            if (bodyByteBuf != null) {
+                bodyByteBuf.release();
+            }
+        }
     }
 }

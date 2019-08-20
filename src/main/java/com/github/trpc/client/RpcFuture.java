@@ -47,10 +47,14 @@ public class RpcFuture<T> implements Future<T> {
     public T get() throws InterruptedException {
         countDownLatch.await();
         if (response == null) {
-            throw  new RpcException(RpcException.TIMEOUT_EXCEPTION);
+            throw new RpcException(RpcException.TIMEOUT_EXCEPTION, "timeout exception");
         }
-        if (response.getException() != null) {
-            throw new RpcException(response.getException());
+        if (response.getResult() == null) {
+            if (response.getException() == null) {
+                throw new RpcException(RpcException.TIMEOUT_EXCEPTION, "timeout exception");
+            } else {
+                throw new RpcException(RpcException.SERVICE_EXCEPTION, response.getException());
+            }
         }
         return (T)response.getResult();
     }
@@ -59,10 +63,14 @@ public class RpcFuture<T> implements Future<T> {
     public T get(long timeout, TimeUnit unit) throws InterruptedException {
         countDownLatch.await(timeout, unit);
         if (response == null) {
-            throw  new RpcException(RpcException.TIMEOUT_EXCEPTION);
+            throw new RpcException(RpcException.TIMEOUT_EXCEPTION, "timeout exception");
         }
-        if (response.getException() != null) {
-            throw new RpcException(response.getException());
+        if (response.getResult() == null) {
+            if (response.getException() == null) {
+                throw new RpcException(RpcException.TIMEOUT_EXCEPTION, "timeout exception");
+            } else {
+                throw new RpcException(RpcException.SERVICE_EXCEPTION, response.getException());
+            }
         }
         return (T)response.getResult();
     }

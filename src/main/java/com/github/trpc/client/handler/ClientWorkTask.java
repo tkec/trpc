@@ -17,7 +17,7 @@ public class ClientWorkTask implements Runnable {
 
     @Override
     public void run() {
-        log.info("Client work thread, response:" + response);
+        // log.info("Client work thread, response:" + response);
         if (response == null || rpcClient == null) {
             return;
         }

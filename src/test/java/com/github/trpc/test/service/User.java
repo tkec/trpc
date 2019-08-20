@@ -1,4 +1,4 @@
-package com.github.trpc.service;
+package com.github.trpc.test.service;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

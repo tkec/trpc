@@ -11,7 +11,10 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.logging.LogLevel;
+import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.ResourceLeakDetector;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -64,12 +67,15 @@ public class RpcServer {
         ChannelInitializer<SocketChannel> channelInitializer = new ChannelInitializer<SocketChannel>() {
             @Override
             protected void initChannel(SocketChannel ch) throws Exception {
+                // ch.pipeline().addLast("logging", new LoggingHandler(LogLevel.INFO));
                 ch.pipeline().addLast("idleStateAwareHandler", new IdleStateHandler(60, 60, 60));
                 ch.pipeline().addLast("idle", new RpcServerChannelIdleHandler());
                 ch.pipeline().addLast(rpcServerHandler);
             }
         };
         bootstrap.group(bossGroup, ioGroup).childHandler(channelInitializer);
+
+        // ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.ADVANCED);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> this.shutdown()));
     }
