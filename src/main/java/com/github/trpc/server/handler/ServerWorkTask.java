@@ -1,5 +1,6 @@
 package com.github.trpc.server.handler;
 
+import com.github.trpc.common.RpcMethodInfo;
 import com.github.trpc.common.exception.RpcException;
 import com.github.trpc.common.protocol.Request;
 import com.github.trpc.common.protocol.Response;
@@ -22,21 +23,23 @@ public class ServerWorkTask implements Runnable {
     private Request request;
     private Response response;
     private ChannelHandlerContext ctx;
+    private RpcMethodInfo rpcMethodInfo;
 
     @Override
     public void run() {
-        if (request == null || response == null || rpcServer == null || ctx == null) {
+        if (request == null || response == null || rpcServer == null || ctx == null || rpcMethodInfo == null) {
             return;
         }
 
         response.setId(request.getId());
         // invoke method
-        Object target = request.getRpcMethodInfo().getTarget();
+        Object target = rpcMethodInfo.getTarget();
         Object[] args = request.getArgs();
         try {
-            Object result = request.getRpcMethodInfo().getMethod().invoke(target, args);
+            Object result = rpcMethodInfo.getMethod().invoke(target, args);
             response.setResult(result);
         } catch (InvocationTargetException e) {
+            e.getTargetException();
             Throwable targetThrowable = e.getTargetException();
             if (targetThrowable == null) {
                 targetThrowable = e;
@@ -45,6 +48,7 @@ public class ServerWorkTask implements Runnable {
             RpcException rpcException = new RpcException(RpcException.SERVICE_EXCEPTION, errMsg);
             response.setException(rpcException);
         } catch (Throwable e2) {
+            e2.printStackTrace();
             String errMsg = String.format("invoke method fail, msg=%s", e2.getLocalizedMessage());
             RpcException rpcException = new RpcException(RpcException.SERVICE_EXCEPTION, errMsg);
             response.setException(rpcException);

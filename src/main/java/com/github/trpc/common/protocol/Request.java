@@ -1,25 +1,12 @@
 package com.github.trpc.common.protocol;
 
-import com.github.trpc.common.RpcMethodInfo;
+import java.io.Serializable;
 
-import java.lang.reflect.Method;
-
-public interface Request {
-    Object getMsg();
-
-    void setMsg(Object object);
+public interface Request extends Serializable {
 
     long getId();
 
     void setId(long id);
-
-    Object getTarget();
-
-    void setTarget(Object target);
-
-    Method getTargetMethod();
-
-    void setTargetMethod(Method method);
 
     String getServiceName();
 
@@ -32,12 +19,4 @@ public interface Request {
     Object[] getArgs();
 
     void setArgs(Object[] args);
-
-    RpcMethodInfo getRpcMethodInfo();
-
-    void setRpcMethodInfo(RpcMethodInfo rpcMethodInfo);
-
-    Exception getException();
-
-    void setException(Exception e);
 }

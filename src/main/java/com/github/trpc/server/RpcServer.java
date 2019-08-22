@@ -1,7 +1,7 @@
 package com.github.trpc.server;
 
 import com.github.trpc.common.protocol.Protocol;
-import com.github.trpc.common.protocol.RpcProtocol;
+import com.github.trpc.common.protocol.protorpcprotocol.ProtoRpcProtocol;
 import com.github.trpc.common.thread.CustomThreadFactory;
 import com.github.trpc.server.handler.RpcServerChannelIdleHandler;
 import com.github.trpc.server.handler.RpcServerHandler;
@@ -11,11 +11,9 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.ResourceLeakDetector;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 
@@ -24,6 +22,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Getter
+@Setter
 @Slf4j
 public class RpcServer {
 
@@ -43,7 +42,7 @@ public class RpcServer {
 
     public RpcServer(int port ,int workThreadNum) {
         this.port = port;
-        protocol = new RpcProtocol();
+        protocol = new ProtoRpcProtocol();
 
         bootstrap = new ServerBootstrap();
         int ioNum = Runtime.getRuntime().availableProcessors();
@@ -60,8 +59,8 @@ public class RpcServer {
         bootstrap.childOption(ChannelOption.SO_REUSEADDR, true);
         bootstrap.childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         bootstrap.childOption(ChannelOption.SO_LINGER, 5);
-        bootstrap.childOption(ChannelOption.SO_SNDBUF, 1024 * 64);
-        bootstrap.childOption(ChannelOption.SO_RCVBUF, 1024 * 64);
+        bootstrap.childOption(ChannelOption.SO_SNDBUF, 1024 * 64 * 1024);
+        bootstrap.childOption(ChannelOption.SO_RCVBUF, 1024 * 64 * 1024);
 
         final RpcServerHandler rpcServerHandler = new RpcServerHandler(this);
         ChannelInitializer<SocketChannel> channelInitializer = new ChannelInitializer<SocketChannel>() {

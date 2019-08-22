@@ -11,11 +11,11 @@ import java.util.concurrent.TimeUnit;
 public class EchoServiceImpl implements EchoService {
     @Override
     public String echo(String msg) {
-        try {
-            TimeUnit.MILLISECONDS.sleep(100);
-        } catch (InterruptedException e) {
-
-        }
+//        try {
+//            TimeUnit.MILLISECONDS.sleep(100);
+//        } catch (InterruptedException e) {
+//
+//        }
         return msg;
     }
 

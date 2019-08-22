@@ -5,7 +5,7 @@ import com.github.trpc.client.handler.RpcClientHandler;
 import com.github.trpc.common.exception.RpcException;
 import com.github.trpc.common.protocol.Protocol;
 import com.github.trpc.common.protocol.Request;
-import com.github.trpc.common.protocol.RpcProtocol;
+import com.github.trpc.common.protocol.protorpcprotocol.ProtoRpcProtocol;
 import com.github.trpc.common.thread.ClientTimeoutTimerInstance;
 import com.github.trpc.common.thread.CustomThreadFactory;
 import io.netty.bootstrap.Bootstrap;
@@ -14,13 +14,9 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.ResourceLeakDetector;
 import io.netty.util.Timeout;
 import io.netty.util.Timer;
-import io.netty.util.internal.logging.InternalLogLevel;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -45,8 +41,8 @@ public class RpcClient {
     private Class serviceInterface;
     private Endpoint endpoint;
     private Channel channel;
-    private LongAdder idGen = new LongAdder();
-    // private AtomicLong idGen = new AtomicLong();
+//    private LongAdder idGen = new LongAdder();
+    private AtomicLong idGen = new AtomicLong();
     private AtomicBoolean start = new AtomicBoolean(false);
 
 
@@ -55,7 +51,7 @@ public class RpcClient {
     }
 
     public RpcClient(Endpoint endpoint) {
-        protocol = new RpcProtocol();
+        protocol = new ProtoRpcProtocol();
         timeoutTimer = ClientTimeoutTimerInstance.getInstance();
         this.endpoint = endpoint;
         int threadNum = Runtime.getRuntime().availableProcessors();
@@ -69,8 +65,8 @@ public class RpcClient {
         bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
         bootstrap.option(ChannelOption.SO_REUSEADDR, true);
         bootstrap.option(ChannelOption.TCP_NODELAY, true);
-        bootstrap.option(ChannelOption.SO_RCVBUF, 1024 * 64);
-        bootstrap.option(ChannelOption.SO_SNDBUF, 1024 * 64);
+        bootstrap.option(ChannelOption.SO_RCVBUF, 1024 * 64 * 1064);
+        bootstrap.option(ChannelOption.SO_SNDBUF, 1024 * 64 * 1064);
 
         final RpcClientHandler rpcClientHandler = new RpcClientHandler(this);
         final ChannelInitializer<SocketChannel> initializer = new ChannelInitializer<SocketChannel>() {
@@ -137,13 +133,18 @@ public class RpcClient {
         RpcFuture rpcFuture = new RpcFuture();
 //        rpcFuture.setRpcClient(this);
 
-        idGen.increment();
-        Long id = idGen.longValue();
-     //   Long id = idGen.incrementAndGet();
+//        idGen.increment();
+//        Long id = idGen.longValue();
+        Long id = idGen.incrementAndGet();
         request.setId(id);
+        RpcFuture rpcFuture1 = requestFutureMap.get(id);
+        if (rpcFuture1 != null) {
+            log.error("RpcFuture is exist, id=" + id);
+            return rpcFuture;
+        }
         requestFutureMap.put(id, rpcFuture);
         RpcTimeoutTimer rpcTimeoutTimer = new RpcTimeoutTimer(this, id);
-        Timeout timeout = timeoutTimer.newTimeout(rpcTimeoutTimer, 200000, TimeUnit.MILLISECONDS);
+        Timeout timeout = timeoutTimer.newTimeout(rpcTimeoutTimer, 20000, TimeUnit.MILLISECONDS);
         rpcFuture.setTimeout(timeout);
 
         try {
@@ -160,6 +161,7 @@ public class RpcClient {
             log.debug("send request: " + request);
         } catch (Exception e) {
             timeout.cancel();
+            e.printStackTrace();
             if (e instanceof RpcException) {
                 throw (RpcException) e;
             } else {

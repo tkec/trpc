@@ -17,6 +17,7 @@
 package com.github.trpc.benchmark;
 
 import com.github.trpc.benchmark.service.EchoServiceImpl;
+import com.github.trpc.common.protocol.rpcprotocol.RpcProtocol;
 import com.github.trpc.server.RpcServer;
 import lombok.extern.slf4j.Slf4j;
 
@@ -31,6 +32,7 @@ public class RpcServerTest {
 //        final RpcServer rpcServer = new RpcServer(port, options);
         final RpcServer rpcServer = new RpcServer(port, 500);
         rpcServer.registerService(new EchoServiceImpl());
+        rpcServer.setProtocol(new RpcProtocol());
         rpcServer.start();
 
         // make server keep running

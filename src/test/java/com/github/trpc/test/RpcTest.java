@@ -3,6 +3,7 @@ package com.github.trpc.test;
 import com.github.trpc.client.RpcClient;
 import com.github.trpc.client.RpcProxy;
 import com.github.trpc.common.exception.RpcException;
+import com.github.trpc.common.protocol.rpcprotocol.RpcProtocol;
 import com.github.trpc.server.RpcServer;
 import com.github.trpc.test.service.EchoService;
 import com.github.trpc.test.service.EchoServiceImpl;
@@ -19,10 +20,12 @@ public class RpcTest {
         RpcServer rpcServer = new RpcServer(8080);
         EchoServiceImpl echoService = new EchoServiceImpl();
         rpcServer.registerService(echoService);
+        rpcServer.setProtocol(new RpcProtocol());
         rpcServer.start();
 
         log.info("start client");
         RpcClient rpcClient = new RpcClient("127.0.0.1", 8080);
+        rpcClient.setProtocol(new RpcProtocol());
         EchoService echoServiceProxy = RpcProxy.getProxy(rpcClient, EchoService.class);
         String result = echoServiceProxy.echo("Hello Rpc");
         log.info("result from server: " + result);

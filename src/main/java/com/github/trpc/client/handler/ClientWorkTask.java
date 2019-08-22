@@ -28,6 +28,8 @@ public class ClientWorkTask implements Runnable {
         if (future == null) {
             log.error("future is null, RpcServer return slow, id=" + id);
         } else {
+            // 已处理过的删除
+            requestFutureMap.remove(id);
             future.handleResponse(response);
         }
     }

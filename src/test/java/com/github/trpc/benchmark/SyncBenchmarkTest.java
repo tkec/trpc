@@ -20,6 +20,7 @@ import com.github.trpc.benchmark.service.EchoService;
 import com.github.trpc.client.RpcClient;
 import com.github.trpc.client.RpcProxy;
 import com.github.trpc.common.exception.RpcException;
+import com.github.trpc.common.protocol.rpcprotocol.RpcProtocol;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
@@ -42,8 +43,9 @@ public class SyncBenchmarkTest {
 //            System.exit(-1);
 //        }
         RpcClient rpcClient = new RpcClient("127.0.0.1", 8002);
+        rpcClient.setProtocol(new RpcProtocol());
         // int threadNum = Integer.parseInt(args[1]);
-        int threadNum = 200;
+        int threadNum = 1000;
 
         InputStream inputStream = Thread.currentThread().getClass()
                 .getResourceAsStream("/message.txt");

@@ -1,6 +1,8 @@
 package com.github.trpc.common.protocol;
 
-public interface Response {
+import java.io.Serializable;
+
+public interface Response extends Serializable {
     Object getResult();
 
     void setResult(Object result);

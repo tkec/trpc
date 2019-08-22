@@ -1,5 +1,6 @@
 package com.github.trpc.common.protocol;
 
+import com.github.trpc.common.protocol.Response;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;

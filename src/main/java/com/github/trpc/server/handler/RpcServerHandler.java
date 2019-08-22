@@ -71,8 +71,7 @@ public class RpcServerHandler extends SimpleChannelInboundHandler<Object> {
                         }
                         return;
                     }
-                    request.setRpcMethodInfo(rpcMethodInfo);
-                    rpcServer.getWorkThreadPool().submit(new ServerWorkTask(rpcServer, request, response, ctx));
+                    rpcServer.getWorkThreadPool().submit(new ServerWorkTask(rpcServer, request, response, ctx, rpcMethodInfo));
                 } catch (NotEnoughDataException e1) {
                     return;
                 } catch (TooBigDataException e2) {

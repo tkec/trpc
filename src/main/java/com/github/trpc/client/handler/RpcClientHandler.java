@@ -42,7 +42,7 @@ public class RpcClientHandler extends SimpleChannelInboundHandler<Object> {
                 log.debug("recv buf readindex:" + channelInfo.getRecvBuf().readableBytes());
                 try {
                     Response response = rpcClient.getProtocol().decodeResponse(channelInfo.getRecvBuf());
-                    log.debug("decode response in handler:" + response.getId());
+                    log.debug("decode response in handler,id=" + response.getId() + ",");
                     rpcClient.getWorkThreadPool().submit(new ClientWorkTask(rpcClient, response));
                 } catch (NotEnoughDataException e1) {
                     break;
