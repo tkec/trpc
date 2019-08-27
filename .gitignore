@@ -22,5 +22,8 @@
 hs_err_pid*
 
 .idea/
+logs/
 trpc.iml
 workspace.xml
+trp-core/trp-core.iml
+trpc-spring-boot-starter/trpc-spring-boot-starter.iml
