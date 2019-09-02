@@ -2,6 +2,7 @@ package com.github.trpc.core.server;
 
 import com.github.trpc.core.common.protocol.Protocol;
 import com.github.trpc.core.common.protocol.protorpcprotocol.ProtoRpcProtocol;
+import com.github.trpc.core.common.protocol.rpcprotocol.RpcProtocol;
 import com.github.trpc.core.common.thread.CustomThreadFactory;
 import com.github.trpc.core.server.handler.RpcServerChannelIdleHandler;
 import com.github.trpc.core.server.handler.RpcServerHandler;
@@ -44,7 +45,7 @@ public class RpcServer {
 
     public RpcServer(int port ,int workThreadNum) {
         this.port = port;
-        protocol = new ProtoRpcProtocol();
+        protocol = new RpcProtocol();
 
         bootstrap = new ServerBootstrap();
         int ioNum = Runtime.getRuntime().availableProcessors();

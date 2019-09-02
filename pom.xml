@@ -16,12 +16,17 @@
     </properties>
 
     <modules>
-        <module>trp-core</module>
+        <module>trpc-core</module>
         <module>trpc-spring-boot-starter</module>
     </modules>
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>com.github.trpc</groupId>
+                <artifactId>trpc-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>

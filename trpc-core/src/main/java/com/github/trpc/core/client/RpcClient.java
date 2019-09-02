@@ -6,6 +6,7 @@ import com.github.trpc.core.common.exception.RpcException;
 import com.github.trpc.core.common.protocol.Protocol;
 import com.github.trpc.core.common.protocol.Request;
 import com.github.trpc.core.common.protocol.protorpcprotocol.ProtoRpcProtocol;
+import com.github.trpc.core.common.protocol.rpcprotocol.RpcProtocol;
 import com.github.trpc.core.common.thread.ClientTimeoutTimerInstance;
 import com.github.trpc.core.common.thread.CustomThreadFactory;
 import io.netty.bootstrap.Bootstrap;
@@ -53,7 +54,7 @@ public class RpcClient {
     }
 
     public RpcClient(Endpoint endpoint) {
-        protocol = new ProtoRpcProtocol();
+        protocol = new RpcProtocol();
         timeoutTimer = ClientTimeoutTimerInstance.getInstance();
         this.endpoint = endpoint;
         int threadNum = Runtime.getRuntime().availableProcessors();
