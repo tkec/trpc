@@ -1,4 +1,4 @@
-package com.github.trpc.spring.annotation;
+package com.github.trpc.springboot.annotation;
 
 import lombok.Getter;
 import lombok.Setter;

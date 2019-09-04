@@ -1,4 +1,4 @@
-package com.github.trpc.spring.annotation;
+package com.github.trpc.springboot.annotation;
 
 import com.github.trpc.core.server.RpcServer;
 import lombok.Getter;

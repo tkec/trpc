@@ -1,8 +1,8 @@
-package com.github.trpc.spring.annotation;
+package com.github.trpc.springboot.annotation;
 
 import java.lang.annotation.*;
 
-@Target({ElementType.TYPE})
+@Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented

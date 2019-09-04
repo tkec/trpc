@@ -1,4 +1,4 @@
-package com.github.trpc.spring.annotation;
+package com.github.trpc.springboot.annotation;
 
 import com.github.trpc.core.client.Endpoint;
 import lombok.extern.slf4j.Slf4j;
@@ -55,15 +55,11 @@ public class RpcAnnotationBeanPostProcessor extends InstantiationAwareBeanPostPr
         Class clazz = bean.getClass();
         Annotation a = clazz.getAnnotation(TRpcService.class);
         if (a != null && a instanceof TRpcService) {
+            log.debug("begin to process TRpcService");
             TRpcService rpcServiceAnnotation = (TRpcService) a;
             processRpcServiceAnnotation(rpcServiceAnnotation, beanFactory.getBean(beanName));
         }
         return bean;
-    }
-
-    @Override
-    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-        return null;
     }
 
     @Override
@@ -115,6 +111,7 @@ public class RpcAnnotationBeanPostProcessor extends InstantiationAwareBeanPostPr
     protected void parseMethods(final Class<?> clazz, final List<Class<? extends Annotation>> annotions,
                                 final LinkedList<InjectionMetadata.InjectedElement> elements) {
         ReflectionUtils.doWithMethods(clazz, new ReflectionUtils.MethodCallback() {
+            @Override
             public void doWith(Method method) {
                 for (Class<? extends Annotation> anno : annotions) {
                     Annotation annotation = method.getAnnotation(anno);
@@ -137,6 +134,7 @@ public class RpcAnnotationBeanPostProcessor extends InstantiationAwareBeanPostPr
     protected void parseFields(final Class<?> clazz, final List<Class<? extends Annotation>> annotations,
                                final LinkedList<InjectionMetadata.InjectedElement> elements) {
         ReflectionUtils.doWithFields(clazz, new ReflectionUtils.FieldCallback() {
+            @Override
             public void doWith(Field field) {
                 for (Class<? extends Annotation> anno : annotations) {
                     Annotation annotation = field.getAnnotation(anno);
