@@ -2,10 +2,10 @@ spring:
   application:
     name: spring-boot-trpc-server
 
-trpc:
-  server:
-    port: 8000
-
 logging:
   level:
     root: debug
+
+trpc:
+  server:
+    port: 8000

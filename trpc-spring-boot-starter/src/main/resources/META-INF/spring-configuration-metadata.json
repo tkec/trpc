@@ -1,0 +1,22 @@
+{
+  "groups": [
+    {
+      "name": "trpc",
+      "type": "com.github.trpc.springboot.annotation.TrpcProperties",
+      "sourceType": "com.github.trpc.springboot.annotation.TrpcProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "trpc.client",
+      "type": "com.github.trpc.springboot.annotation.RpcClientConfig",
+      "sourceType": "com.github.trpc.springboot.annotation.TrpcProperties"
+    },
+    {
+      "name": "trpc.server",
+      "type": "com.github.trpc.springboot.annotation.RpcServerConfig",
+      "sourceType": "com.github.trpc.springboot.annotation.TrpcProperties"
+    }
+  ],
+  "hints": []
+}

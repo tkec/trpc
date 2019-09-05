@@ -18,6 +18,7 @@
     <modules>
         <module>trpc-core</module>
         <module>trpc-spring-boot-starter</module>
+        <module>trpc-examples</module>
     </modules>
 
     <dependencyManagement>
