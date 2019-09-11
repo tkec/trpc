@@ -1,13 +1,12 @@
-package com.github.trpc.core.client;
+package com.github.trpc.core.common.registry;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
 @Setter
 @Getter
-@AllArgsConstructor
-public class Endpoint {
+public class RegisterInfo {
     private String host;
     private Integer port;
+    private String interfaceName;
 }

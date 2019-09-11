@@ -48,7 +48,9 @@
                 <archive>
                     <manifest>
                         <!-- 你也可以在这里自己写MainClass -->
-                        <mainClass>com.github.trpc.example.test.RpcTest</mainClass>
+<!--                        <mainClass>com.github.trpc.example.benchmark.RpcServerTest</mainClass>-->
+<!--                        <mainClass>com.github.trpc.example.test.RpcTest</mainClass>-->
+                        <mainClass>com.github.trpc.example.benchmark.SyncBenchmarkTest</mainClass>
                     </manifest>
                 </archive>
                 <descriptorRefs>

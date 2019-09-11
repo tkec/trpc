@@ -1,6 +1,6 @@
 package com.github.trpc.springboot.autoconfigure;
 
-import com.github.trpc.springboot.annotation.TRpcService;
+import com.github.trpc.springboot.annotation.TrpcService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
@@ -51,7 +51,7 @@ public class RpcServiceRegister implements ImportBeanDefinitionRegistrar, Resour
             if (old != null) {
                 throw new RuntimeException("interface already be exported by bean name:" + old);
             }
-            log.debug("register TRpcService bean, serviceBeanName:" + serviceBeanName + ", candidate:" + candidate);
+            log.debug("register TrpcService bean, serviceBeanName:" + serviceBeanName + ", candidate:" + candidate);
             beanDefinitionRegistry.registerBeanDefinition(serviceBeanName, candidate);
         }
     }
@@ -60,7 +60,7 @@ public class RpcServiceRegister implements ImportBeanDefinitionRegistrar, Resour
         ClassPathScanningCandidateComponentProvider scanner =
                 new ClassPathScanningCandidateComponentProvider(false, environment);
 
-        scanner.addIncludeFilter(new AnnotationTypeFilter(TRpcService.class));
+        scanner.addIncludeFilter(new AnnotationTypeFilter(TrpcService.class));
         scanner.setResourceLoader(resourceLoader);
         return AutoConfigurationPackages.get(beanFactory).stream()
                 .flatMap(basePackage -> scanner.findCandidateComponents(basePackage).stream())

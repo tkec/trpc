@@ -42,8 +42,9 @@ public class SyncBenchmarkTest {
 //            System.out.println("usage: BenchmarkTest list://127.0.0.1:8002 threadNum");
 //            System.exit(-1);
 //        }
-        RpcClient rpcClient = new RpcClient("127.0.0.1", 8002);
-        rpcClient.setProtocol(new RpcProtocol());
+//        RpcClient rpcClient = new RpcClient("127.0.0.1", 8002);
+        RpcClient rpcClient = new RpcClient("list://127.0.0.1:8002,127.0.0.1:8003");
+//        rpcClient.setProtocol(new RpcProtocol());
         // int threadNum = Integer.parseInt(args[1]);
         int threadNum = 1000;
 

@@ -2,9 +2,9 @@ package com.github.trpc.springboot.annotation;
 
 import java.lang.annotation.*;
 
-@Target({ElementType.FIELD})
+@Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface TRpcClient {
+public @interface TrpcService {
 }

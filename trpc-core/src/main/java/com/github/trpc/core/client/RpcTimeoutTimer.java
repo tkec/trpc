@@ -18,11 +18,8 @@ public class RpcTimeoutTimer implements TimerTask {
     @Override
     public void run(Timeout timeout) throws Exception {
         RpcFuture rpcFuture = rpcClient.getRequestFutureMap().get(id);
-
         if (rpcFuture != null) {
-            String host = rpcClient.getEndpoint().getHost();
-            Integer port = rpcClient.getEndpoint().getPort();
-            String errMsg = String.format("Request timeout, id=%d, ip=%s, port=%d.", id, host, port);
+            String errMsg = String.format("Request timeout, id=%d", id);
             log.error(errMsg);
             Response response = rpcClient.getProtocol().createResponse();
             response.setException(new RpcException(RpcException.TIMEOUT_EXCEPTION, errMsg));

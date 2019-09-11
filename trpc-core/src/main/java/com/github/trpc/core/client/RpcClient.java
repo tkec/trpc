@@ -1,12 +1,20 @@
 package com.github.trpc.core.client;
 
+import com.github.trpc.core.client.channel.RpcChannel;
 import com.github.trpc.core.client.handler.IdleChannelHandler;
 import com.github.trpc.core.client.handler.RpcClientHandler;
+import com.github.trpc.core.client.instance.BasicInstanceProcessor;
+import com.github.trpc.core.client.instance.Endpoint;
+import com.github.trpc.core.client.instance.InstanceProcessor;
+import com.github.trpc.core.client.instance.ServiceInstance;
+import com.github.trpc.core.client.loadbalance.LoadBalanceManager;
+import com.github.trpc.core.client.loadbalance.LoadBalanceStrategy;
 import com.github.trpc.core.common.exception.RpcException;
+import com.github.trpc.core.common.extension.ExtensionLoaderManager;
 import com.github.trpc.core.common.protocol.Protocol;
 import com.github.trpc.core.common.protocol.Request;
-import com.github.trpc.core.common.protocol.protorpcprotocol.ProtoRpcProtocol;
 import com.github.trpc.core.common.protocol.rpcprotocol.RpcProtocol;
+import com.github.trpc.core.common.registry.*;
 import com.github.trpc.core.common.thread.ClientTimeoutTimerInstance;
 import com.github.trpc.core.common.thread.CustomThreadFactory;
 import io.netty.bootstrap.Bootstrap;
@@ -21,8 +29,10 @@ import io.netty.util.Timer;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.Validate;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -38,25 +48,68 @@ public class RpcClient {
     private Bootstrap bootstrap;
     private Timer timeoutTimer;
     private Protocol protocol;
+    private RpcClientConfig rpcClientConfig = new RpcClientConfig();
+    private Registry registry;
+    private SubscribeInfo subscribeInfo;
     private ExecutorService workThreadPool;
     private EventLoopGroup ioThreadPool;
     private ConcurrentHashMap<Long, RpcFuture> requestFutureMap;
     private Class serviceInterface;
-    private Endpoint endpoint;
-    private Channel channel;
-//    private LongAdder idGen = new LongAdder();
+    private InstanceProcessor instanceProcessor;
+    private LoadBalanceStrategy loadBalanceStrategy;
+//    private Endpoint endpoint;
+//    private Channel channel;
     private AtomicLong idGen = new AtomicLong();
     private AtomicBoolean start = new AtomicBoolean(false);
 
+    public RpcClient(String serverUrl) {
+        this(serverUrl, new RpcClientConfig());
+    }
+
+    public RpcClient(String serverUrl, RpcClientConfig rpcClientConfig) {
+        Validate.notEmpty(serverUrl);
+        if (rpcClientConfig == null) {
+            rpcClientConfig = new RpcClientConfig();
+        }
+
+        ExtensionLoaderManager.getInstance().loadAllExtensions();
+
+        RpcURL url = new RpcURL(serverUrl);
+        RegistryFactory registryFactory = RegistryFactoryManager.getInstance().getRegistryFactory(url.getSchema());
+        this.registry = registryFactory.createRegistry(url);
+        init(rpcClientConfig);
+    }
 
     public RpcClient(String host, Integer port) {
         this(new Endpoint(host, port));
     }
 
     public RpcClient(Endpoint endpoint) {
+        this(endpoint, new RpcClientConfig());
+    }
+
+    public RpcClient(Endpoint endpoint, RpcClientConfig rpcClientConfig) {
+        Validate.notNull(endpoint);
+        if (rpcClientConfig == null) {
+            rpcClientConfig = new RpcClientConfig();
+        }
+//        this.endpoint = endpoint;
+        init(rpcClientConfig);
+        instanceProcessor.addInstance(new ServiceInstance(endpoint));
+    }
+
+    private void init(final RpcClientConfig rpcClientConfig) {
+        this.rpcClientConfig.copyFrom(rpcClientConfig);
         protocol = new RpcProtocol();
+        ExtensionLoaderManager.getInstance().loadAllExtensions();
+
+        instanceProcessor = new BasicInstanceProcessor(this);
+        loadBalanceStrategy = LoadBalanceManager.getInstance().createLoadBalance(
+                this.rpcClientConfig.getLoadBalanceType());
+        loadBalanceStrategy.init(this);
+
         timeoutTimer = ClientTimeoutTimerInstance.getInstance();
-        this.endpoint = endpoint;
+
         int threadNum = Runtime.getRuntime().availableProcessors();
         workThreadPool = Executors.newFixedThreadPool(threadNum, new CustomThreadFactory("client-work-thread"));
         ioThreadPool = new NioEventLoopGroup(threadNum, new CustomThreadFactory("client-io-thread"));
@@ -85,20 +138,59 @@ public class RpcClient {
         bootstrap.group(ioThreadPool).handler(initializer);
     }
 
+    public void addServiceInterface(Class serviceInterface) {
+        if (this.serviceInterface != null) {
+            throw new IllegalArgumentException("RpcClient serviceInterface has set");
+        }
+        this.serviceInterface = serviceInterface;
+
+        if (registry != null) {
+            subscribeInfo = new SubscribeInfo();
+            subscribeInfo.setInterfaceName(serviceInterface.getName());
+
+            List<ServiceInstance> instances = registry.lookup(subscribeInfo);
+            // add instances
+            instanceProcessor.addInstances(instances);
+            registry.subscribe(subscribeInfo, (addList, deleteList) -> {
+                instanceProcessor.addInstances(addList);
+                instanceProcessor.deleteInstances(deleteList);
+            });
+        }
+    }
+
     public Channel selectChannel(Request request) {
-        if (!isActive(channel)) {
-            synchronized (this) {
-                if (!isActive(channel)) {
-                    log.info("reconnect to server");
-                    Channel newChannel = createChannel(endpoint.getHost(), endpoint.getPort());
-                    if (channel != null ) {
-                        channel.close();
-                    }
-                    channel = newChannel;
-                }
-            }
+        RpcChannel rpcChannel = loadBalanceStrategy.selectInstance(request,
+                instanceProcessor.getRpcChannels(), null);
+        if (rpcChannel == null) {
+            throw new RpcException(RpcException.NETWORK_EXCEPTION, "no available instance");
+        }
+        Channel channel = null;
+        try {
+            channel = rpcChannel.getChannel();
+        } catch (Exception e) {
+            throw new RpcException(RpcException.UNKNOWN_EXCEPTION, "channel connect failed");
+        }
+        if (channel == null) {
+            throw new RpcException(RpcException.UNKNOWN_EXCEPTION, "channel is null");
+        }
+        if (!channel.isActive()) {
+            rpcChannel.removeChannel();
+            throw new RpcException(RpcException.UNKNOWN_EXCEPTION, "channel is inactive");
         }
         return channel;
+//        if (!isActive(channel)) {
+//            synchronized (this) {
+//                if (!isActive(channel)) {
+//                    log.info("reconnect to server");
+//                    Channel newChannel = createChannel(endpoint.getHost(), endpoint.getPort());
+//                    if (channel != null ) {
+//                        channel.close();
+//                    }
+//                    channel = newChannel;
+//                }
+//            }
+//        }
+//        return channel;
     }
 
     private Boolean isActive(Channel channel) {
@@ -182,11 +274,20 @@ public class RpcClient {
             if (ioThreadPool != null) {
                 ioThreadPool.shutdownGracefully();
             }
-            if (channel != null) {
-                channel.close();
-            }
+//            if (channel != null) {
+//                channel.close();
+//            }
             if (timeoutTimer != null) {
                 timeoutTimer.stop();
+            }
+            if (registry != null) {
+                registry.unSubscribe(subscribeInfo);
+            }
+            if (instanceProcessor != null) {
+                instanceProcessor.stop();
+            }
+            if (loadBalanceStrategy != null) {
+                loadBalanceStrategy.destory();
             }
         }
     }

@@ -1,9 +1,12 @@
 package com.github.trpc.core.server;
 
+import com.github.trpc.core.common.extension.ExtensionLoaderManager;
 import com.github.trpc.core.common.protocol.Protocol;
 import com.github.trpc.core.common.protocol.protorpcprotocol.ProtoRpcProtocol;
 import com.github.trpc.core.common.protocol.rpcprotocol.RpcProtocol;
+import com.github.trpc.core.common.registry.*;
 import com.github.trpc.core.common.thread.CustomThreadFactory;
+import com.github.trpc.core.common.utils.NetUtils;
 import com.github.trpc.core.server.handler.RpcServerChannelIdleHandler;
 import com.github.trpc.core.server.handler.RpcServerHandler;
 import io.netty.bootstrap.ServerBootstrap;
@@ -16,10 +19,14 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.NetUtil;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -29,23 +36,35 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 public class RpcServer {
 
-
     private ServerBootstrap bootstrap;
     private EventLoopGroup bossGroup;
     private EventLoopGroup ioGroup;
     private int port;
+    private RpcServerConfig rpcServerConfig;
+    private Registry registry;
+    private List<RegisterInfo> registerInfoList = new ArrayList<>();
     private Protocol protocol;
     private ExecutorService workThreadPool;
     private AtomicBoolean start = new AtomicBoolean(false);
 
 
     public RpcServer(int port) {
-        this(port, 100);
+        this(port, 100, new RpcServerConfig());
     }
 
     public RpcServer(int port ,int workThreadNum) {
+        this(port, workThreadNum, new RpcServerConfig());
+    }
+
+    public RpcServer(int port ,int workThreadNum, RpcServerConfig rpcServerConfig) {
         this.port = port;
         protocol = new RpcProtocol();
+        ExtensionLoaderManager.getInstance().loadAllExtensions();
+        if (StringUtils.isNotEmpty(rpcServerConfig.getRegistryUrl())) {
+            RpcURL url = new RpcURL(rpcServerConfig.getRegistryUrl());
+            RegistryFactory registryFactory = RegistryFactoryManager.getInstance().getRegistryFactory(url.getSchema());
+            this.registry = registryFactory.createRegistry(url);
+        }
 
         bootstrap = new ServerBootstrap();
         int ioNum = Runtime.getRuntime().availableProcessors();
@@ -84,6 +103,12 @@ public class RpcServer {
 
     public void registerService(Object service) {
         ServiceManager.getInstance().registerService(service);
+
+        RegisterInfo registerInfo = new RegisterInfo();
+        registerInfo.setHost(NetUtils.getLocalAddress().getHostAddress());
+        registerInfo.setPort(port);
+        registerInfo.setInterfaceName(service.getClass().getInterfaces()[0].getName());
+        registerInfoList.add(registerInfo);
     }
 
     public void start() {
@@ -91,6 +116,11 @@ public class RpcServer {
             try {
                 ChannelFuture channelFuture = bootstrap.bind(port);
                 channelFuture.sync();
+                if (registry != null) {
+                    for (RegisterInfo registerInfo : registerInfoList) {
+                        registry.register(registerInfo);
+                    }
+                }
             } catch (Exception e) {
                 log.error("Server start error: " + e.getLocalizedMessage());
                 return;

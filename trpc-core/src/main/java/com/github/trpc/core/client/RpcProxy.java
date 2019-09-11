@@ -37,7 +37,7 @@ public class RpcProxy implements MethodInterceptor {
     }
 
     public static <T> T getProxy(RpcClient rpcClient, Class clazz) {
-        rpcClient.setServiceInterface(clazz);
+        rpcClient.addServiceInterface(clazz);
         Enhancer enhancer = new Enhancer();
         enhancer.setSuperclass(clazz);
         enhancer.setCallback(new RpcProxy(rpcClient, clazz));
@@ -73,7 +73,7 @@ public class RpcProxy implements MethodInterceptor {
             request.setArgs(args);
 
             Response response = rpcClient.getProtocol().createResponse();
-            int maxRetryTimes = 1;
+            int maxRetryTimes = 3;
             int currentTryTime = 1;
             while (currentTryTime <= maxRetryTimes) {
                 try {

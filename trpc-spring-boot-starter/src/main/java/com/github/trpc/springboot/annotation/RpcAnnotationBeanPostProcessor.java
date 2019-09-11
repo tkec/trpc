@@ -1,6 +1,6 @@
 package com.github.trpc.springboot.annotation;
 
-import com.github.trpc.core.client.Endpoint;
+import com.github.trpc.core.client.instance.Endpoint;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeansException;
@@ -53,10 +53,10 @@ public class RpcAnnotationBeanPostProcessor extends InstantiationAwareBeanPostPr
     @Override
     public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
         Class clazz = bean.getClass();
-        Annotation a = clazz.getAnnotation(TRpcService.class);
-        if (a != null && a instanceof TRpcService) {
-            log.debug("begin to process TRpcService");
-            TRpcService rpcServiceAnnotation = (TRpcService) a;
+        Annotation a = clazz.getAnnotation(TrpcService.class);
+        if (a != null && a instanceof TrpcService) {
+            log.debug("begin to process TrpcService");
+            TrpcService rpcServiceAnnotation = (TrpcService) a;
             processRpcServiceAnnotation(rpcServiceAnnotation, beanFactory.getBean(beanName));
         }
         return bean;
@@ -65,7 +65,7 @@ public class RpcAnnotationBeanPostProcessor extends InstantiationAwareBeanPostPr
     @Override
     public void postProcessMergedBeanDefinition(RootBeanDefinition rootBeanDefinition, Class<?> beanType, String beanName) {
         List<Class<? extends Annotation>> annotations = new ArrayList<>();
-        annotations.add(TRpcClient.class);
+        annotations.add(TrpcClient.class);
         if (beanType != null && annotations != null) {
             InjectionMetadata metadata = findAnnotationMetadata(beanType, annotations);
             metadata.checkConfigMembers(rootBeanDefinition);
@@ -75,7 +75,7 @@ public class RpcAnnotationBeanPostProcessor extends InstantiationAwareBeanPostPr
     @Override
     public PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName) throws BeansException {
         List<Class<? extends Annotation>> annotations = new ArrayList<>();
-        annotations.add(TRpcClient.class);
+        annotations.add(TrpcClient.class);
 
         InjectionMetadata metadata = findAnnotationMetadata(bean.getClass(), annotations);
         try {
@@ -282,7 +282,7 @@ public class RpcAnnotationBeanPostProcessor extends InstantiationAwareBeanPostPr
     }
 
 
-    private void processRpcServiceAnnotation(TRpcService rpcService, Object bean) {
+    private void processRpcServiceAnnotation(TrpcService rpcService, Object bean) {
         TrpcProperties properties = beanFactory.getBean(TrpcProperties.class);
         if (properties == null) {
             throw new RuntimeException("trpc properties is null");
@@ -298,7 +298,7 @@ public class RpcAnnotationBeanPostProcessor extends InstantiationAwareBeanPostPr
     }
 
     private Object processRpcClientAnnotation(Annotation annotation, Class serviceInterface, Object value) throws Exception {
-        if (!(annotation instanceof TRpcClient)) {
+        if (!(annotation instanceof TrpcClient)) {
             return value;
         }
         TrpcProperties properties = beanFactory.getBean(TrpcProperties.class);

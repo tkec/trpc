@@ -2,7 +2,7 @@ package com.github.trpc.example.springboot.client;
 
 import com.github.trpc.example.springboot.api.EchoService;
 import com.github.trpc.example.springboot.api.User;
-import com.github.trpc.springboot.annotation.TRpcClient;
+import com.github.trpc.springboot.annotation.TrpcClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/")
 public class EchoController {
 
-    @TRpcClient
+    @TrpcClient
     private EchoService echoService;
 
     @GetMapping("/echo")

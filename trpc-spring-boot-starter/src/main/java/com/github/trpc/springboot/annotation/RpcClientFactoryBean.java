@@ -1,6 +1,6 @@
 package com.github.trpc.springboot.annotation;
 
-import com.github.trpc.core.client.Endpoint;
+import com.github.trpc.core.client.instance.Endpoint;
 import com.github.trpc.core.client.RpcClient;
 import com.github.trpc.core.client.RpcProxy;
 import lombok.Setter;
