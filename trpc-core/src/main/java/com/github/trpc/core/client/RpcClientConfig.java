@@ -31,6 +31,8 @@ public class RpcClientConfig {
 
     private String registryUrl;
 
+    private String serviceId;
+
     private Integer loadBalanceType = LoadBalanceStrategy.LOAD_BALANCE_ROUND_ROBIN;
 
     public RpcClientConfig(RpcClientConfig config) {
@@ -49,6 +51,7 @@ public class RpcClientConfig {
         this.workThreadNum = config.workThreadNum;
         this.protocolType = config.protocolType;
         this.registryUrl = config.registryUrl;
+        this.serviceId = config.serviceId;
         this.loadBalanceType = config.loadBalanceType;
     }
 }

@@ -7,4 +7,5 @@ import lombok.Setter;
 @Getter
 public class SubscribeInfo {
     private String interfaceName;
+    private RegistryConfig registryConfig;
 }

@@ -1,6 +1,5 @@
 package com.github.trpc.springboot.annotation;
 
-import com.github.trpc.core.client.instance.Endpoint;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeansException;
@@ -47,8 +46,7 @@ public class RpcAnnotationBeanPostProcessor extends InstantiationAwareBeanPostPr
 
     private AtomicBoolean started = new AtomicBoolean(false);
 
-    private final Map<Class<?>, InjectionMetadata> injectionMetadataCache =
-            new ConcurrentHashMap<Class<?>, InjectionMetadata>();
+    private final Map<Class<?>, InjectionMetadata> injectionMetadataCache = new ConcurrentHashMap<>();
 
     @Override
     public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
@@ -301,6 +299,7 @@ public class RpcAnnotationBeanPostProcessor extends InstantiationAwareBeanPostPr
         if (!(annotation instanceof TrpcClient)) {
             return value;
         }
+        TrpcClient trpcClient = (TrpcClient)annotation;
         TrpcProperties properties = beanFactory.getBean(TrpcProperties.class);
         if (properties == null) {
             throw new RuntimeException("trpc properties is null");
@@ -316,24 +315,35 @@ public class RpcAnnotationBeanPostProcessor extends InstantiationAwareBeanPostPr
             // continue the following logic to create new factory bean
         }
 
-        rpcProxyFactoryBean = createRpcClientFactoryBean(properties.getClient().getServiceUrl(), serviceInterface);
+        rpcProxyFactoryBean = createRpcClientFactoryBean(trpcClient, properties.getClient().getServiceUrl(), serviceInterface);
         rpcClientFactoryBeanList.add(rpcProxyFactoryBean);
         Object object = rpcProxyFactoryBean.getObject();
 
         return object;
     }
 
-    private RpcClientFactoryBean createRpcClientFactoryBean(String serviceUrl, Class serviceInterface) {
+    private RpcClientFactoryBean createRpcClientFactoryBean(TrpcClient trpcClient, String serviceUrl, Class serviceInterface) {
         GenericBeanDefinition beanDefinition = new GenericBeanDefinition();
         beanDefinition.setBeanClass(RpcClientFactoryBean.class);
+        // 需要dependsOn holder类，因为RpcClient创建时，有些Registry是需要通过Holder拿到相关Bean
+        // 如果没有dependsOn，FactoryBean的创建会优先于Holder，导致拿不到相关bean
+        beanDefinition.setDependsOn("applicationContextHolder");
         MutablePropertyValues values = new MutablePropertyValues();
         values.addPropertyValue("serviceInterface", serviceInterface);
-        String[] hostPort = serviceUrl.split(":");
-        if (hostPort == null || hostPort.length != 2) {
-            throw new IllegalArgumentException("service url is illegal. serviceUrl=" + serviceUrl);
-        }
-        Integer port = Integer.valueOf(hostPort[1]);
-        values.addPropertyValue("endpoint", new Endpoint(hostPort[0], port));
+        values.addPropertyValue("serviceUrl", serviceUrl);
+        values.addPropertyValue("serviceId", trpcClient.value());
+
+//        if (serviceUrl.indexOf("://") < 0) {
+//            String[] hostPort = serviceUrl.split(":");
+//            if (hostPort == null || hostPort.length != 2) {
+//                throw new IllegalArgumentException("service url is illegal. serviceUrl=" + serviceUrl);
+//            }
+//            Integer port = Integer.valueOf(hostPort[1]);
+//
+//        } else {
+//
+//        }
+
         beanDefinition.setPropertyValues(values);
         String serviceInterfaceBeanName = serviceInterface.getSimpleName();
         beanFactory.registerBeanDefinition(serviceInterfaceBeanName, beanDefinition);

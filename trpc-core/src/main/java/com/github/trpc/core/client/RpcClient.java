@@ -138,7 +138,7 @@ public class RpcClient {
         bootstrap.group(ioThreadPool).handler(initializer);
     }
 
-    public void addServiceInterface(Class serviceInterface) {
+    public void addServiceInterface(Class serviceInterface, RegistryConfig registryConfig) {
         if (this.serviceInterface != null) {
             throw new IllegalArgumentException("RpcClient serviceInterface has set");
         }
@@ -147,6 +147,10 @@ public class RpcClient {
         if (registry != null) {
             subscribeInfo = new SubscribeInfo();
             subscribeInfo.setInterfaceName(serviceInterface.getName());
+            if (registryConfig == null) {
+                registryConfig = new RegistryConfig();
+            }
+            subscribeInfo.setRegistryConfig(registryConfig);
 
             List<ServiceInstance> instances = registry.lookup(subscribeInfo);
             // add instances

@@ -4,4 +4,16 @@ spring:
 
 trpc:
   client:
-    serviceUrl: 127.0.0.1:8000
+    serviceUrl: springcloud://127.0.0.1:8000
+    #serviceUrl: list://127.0.0.1:8000
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://${spring.cloud.client.ip-address}:8761/eureka/,http://127.0.0.1:8761/eureka/
+    fetch-registry: true
+    registry-fetch-interval-seconds: 30
+
+logging:
+  level:
+    root: info

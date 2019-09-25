@@ -1,2 +1,5 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.github.trpc.springboot.autoconfigure.TrpcAutoConfiguration
+
+org.springframework.boot.env.EnvironmentPostProcessor=\
+  com.github.trpc.springboot.registry.MetaDataEnvProcessor

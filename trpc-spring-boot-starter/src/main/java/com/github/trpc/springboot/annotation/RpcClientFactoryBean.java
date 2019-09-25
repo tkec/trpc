@@ -1,8 +1,8 @@
 package com.github.trpc.springboot.annotation;
 
-import com.github.trpc.core.client.instance.Endpoint;
 import com.github.trpc.core.client.RpcClient;
 import com.github.trpc.core.client.RpcProxy;
+import com.github.trpc.core.common.registry.RegistryConfig;
 import lombok.Setter;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
@@ -13,7 +13,9 @@ public class RpcClientFactoryBean implements FactoryBean, InitializingBean, Disp
 
     private Class serviceInterface;
 
-    private Endpoint endpoint;
+    private String serviceUrl;
+
+    private String serviceId;
 
     private Object serviceProxy;
 
@@ -47,8 +49,10 @@ public class RpcClientFactoryBean implements FactoryBean, InitializingBean, Disp
     @Override
     public void afterPropertiesSet() throws Exception {
         if (rpcClient == null) {
-            rpcClient = new RpcClient(endpoint);
+            rpcClient = new RpcClient(serviceUrl);
         }
-        this.serviceProxy = RpcProxy.getProxy(rpcClient, serviceInterface);
+        RegistryConfig registryConfig = new RegistryConfig();
+        registryConfig.setServiceId(serviceId);
+        this.serviceProxy = RpcProxy.getProxy(rpcClient, serviceInterface, registryConfig);
     }
 }

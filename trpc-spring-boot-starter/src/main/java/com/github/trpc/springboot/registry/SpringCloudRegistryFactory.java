@@ -1,12 +1,12 @@
-package com.github.trpc.core.common.registry.list;
+package com.github.trpc.springboot.registry;
 
 import com.github.trpc.core.common.registry.Registry;
 import com.github.trpc.core.common.registry.RegistryFactory;
 import com.github.trpc.core.common.registry.RpcURL;
 
-public class ListRegistryFactory implements RegistryFactory {
+public class SpringCloudRegistryFactory implements RegistryFactory {
 
-    public static final String NAME = "list";
+    public static final String NAME = "springcloud";
 
     @Override
     public String getName() {
@@ -17,7 +17,7 @@ public class ListRegistryFactory implements RegistryFactory {
     public Registry createRegistry(RpcURL url) {
         String schema = url.getSchema();
         if (schema.equals(NAME)) {
-            return new ListRegistry(url);
+            return new SpringCloudRegistry(url);
         } else {
             throw new IllegalArgumentException("schema is invalid:" + schema);
         }

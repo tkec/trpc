@@ -3,8 +3,8 @@ package com.github.trpc.core.client.instance;
 import com.github.trpc.core.client.RpcClient;
 import com.github.trpc.core.client.channel.RpcChannel;
 
+import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.Lock;
@@ -42,14 +42,14 @@ public class BasicInstanceProcessor implements InstanceProcessor {
     }
 
     @Override
-    public void addInstances(List<ServiceInstance> addList) {
+    public void addInstances(Collection<ServiceInstance> addList) {
         for (ServiceInstance serviceInstance : addList) {
             addInstance(serviceInstance);
         }
     }
 
     @Override
-    public void deleteInstances(List<ServiceInstance> deleteList) {
+    public void deleteInstances(Collection<ServiceInstance> deleteList) {
         for (ServiceInstance serviceInstance : deleteList) {
             deleteInstance(serviceInstance);
         }

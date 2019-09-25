@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/")
 public class EchoController {
 
-    @TrpcClient
+    @TrpcClient("spring-boot-trpc-server")
     private EchoService echoService;
 
     @GetMapping("/echo")

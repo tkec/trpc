@@ -7,4 +7,6 @@ import java.lang.annotation.*;
 @Inherited
 @Documented
 public @interface TrpcClient {
+    // serviceId
+    String value() default "";
 }

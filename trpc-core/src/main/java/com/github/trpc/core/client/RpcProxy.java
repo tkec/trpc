@@ -4,6 +4,7 @@ import com.github.trpc.core.common.RpcMethodInfo;
 import com.github.trpc.core.common.exception.RpcException;
 import com.github.trpc.core.common.protocol.Request;
 import com.github.trpc.core.common.protocol.Response;
+import com.github.trpc.core.common.registry.RegistryConfig;
 import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.cglib.proxy.Enhancer;
@@ -37,7 +38,11 @@ public class RpcProxy implements MethodInterceptor {
     }
 
     public static <T> T getProxy(RpcClient rpcClient, Class clazz) {
-        rpcClient.addServiceInterface(clazz);
+        return getProxy(rpcClient, clazz, null);
+    }
+
+    public static <T> T getProxy(RpcClient rpcClient, Class clazz, RegistryConfig registryConfig) {
+        rpcClient.addServiceInterface(clazz, registryConfig);
         Enhancer enhancer = new Enhancer();
         enhancer.setSuperclass(clazz);
         enhancer.setCallback(new RpcProxy(rpcClient, clazz));

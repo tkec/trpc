@@ -40,6 +40,7 @@ public class RpcServiceRegister implements ImportBeanDefinitionRegistrar, Resour
         Map<Class, String> serviceExporterMap = new HashMap<>();
         AnnotationBeanNameGenerator beanNameGenerator = new AnnotationBeanNameGenerator();
         Collection<BeanDefinition> candidates = getCandidates(resourceLoader);
+        log.debug("begin to register TrpcService bean");
         for (BeanDefinition candidate : candidates) {
             Class<?> clazz = getClass(candidate.getBeanClassName());
             Class<?>[] interfaces = ClassUtils.getAllInterfacesForClass(clazz);
