@@ -31,7 +31,6 @@ public class MetaDataEnvProcessor implements EnvironmentPostProcessor {
             map.put("eureka.instance.metadata-map", metaMap);
             MapPropertySource propertySource = new MapPropertySource("eurekaMetadataTrpcPort", map);
             environment.getPropertySources().addLast(propertySource);
-            // log.info("put trpc port to eureaka metadata:");
         }
     }
 }

@@ -1,20 +1,13 @@
 package com.github.trpc.springboot.autoconfigure;
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.Ordered;
 import org.springframework.core.PriorityOrdered;
 
-@Slf4j
-public class ApplicationContextHolder implements ApplicationContextAware, PriorityOrdered, InitializingBean {
+public class ApplicationContextHolder implements ApplicationContextAware, PriorityOrdered {
     private static ApplicationContext context;
-
-    public ApplicationContextHolder() {
-        System.out.println("begin to init applicationContextHolder");
-    }
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
@@ -30,9 +23,4 @@ public class ApplicationContextHolder implements ApplicationContextAware, Priori
         return context.getBean(clazz);
     }
 
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        System.out.println("context:" + context);
-        log.info("context holder:" + context);
-    }
 }
