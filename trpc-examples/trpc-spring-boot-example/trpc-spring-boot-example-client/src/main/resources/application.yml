@@ -4,7 +4,7 @@ spring:
 
 trpc:
   client:
-    serviceUrl: springcloud://127.0.0.1:8000
+    serviceUrl: springcloud://localhost
     #serviceUrl: list://127.0.0.1:8000
 
 eureka:

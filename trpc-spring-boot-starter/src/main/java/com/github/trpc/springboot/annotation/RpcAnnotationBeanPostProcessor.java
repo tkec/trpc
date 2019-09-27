@@ -31,6 +31,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
@@ -263,6 +264,10 @@ public class RpcAnnotationBeanPostProcessor extends InstantiationAwareBeanPostPr
                 try {
                     for (RpcServiceExporter exporter : rpcServiceExporterMap.values()) {
                         exporter.start();
+                    }
+                    // if servers exist, await to forbid springboot shutdown
+                    if (rpcServiceExporterMap.values().size() > 0) {
+                        new CountDownLatch(1).await();
                     }
                 } catch (Exception e) {
                     throw new RuntimeException(e);
