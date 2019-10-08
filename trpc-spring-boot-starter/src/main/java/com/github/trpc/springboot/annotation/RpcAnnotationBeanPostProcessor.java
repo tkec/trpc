@@ -12,6 +12,9 @@ import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.GenericBeanDefinition;
 import org.springframework.beans.factory.support.MergedBeanDefinitionPostProcessor;
 import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.boot.WebApplicationType;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
@@ -36,10 +39,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 public class RpcAnnotationBeanPostProcessor extends InstantiationAwareBeanPostProcessorAdapter
-        implements MergedBeanDefinitionPostProcessor, BeanFactoryAware,
+        implements MergedBeanDefinitionPostProcessor, BeanFactoryAware, ApplicationContextAware,
         PriorityOrdered, DisposableBean, ApplicationListener<ApplicationEvent> {
 
     private DefaultListableBeanFactory beanFactory;
+
+    private ApplicationContext applicationContext;
 
     private List<RpcClientFactoryBean> rpcClientFactoryBeanList = new ArrayList<>();
 
@@ -252,6 +257,12 @@ public class RpcAnnotationBeanPostProcessor extends InstantiationAwareBeanPostPr
     }
 
     @Override
+    public void setApplicationContext(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
+    }
+
+
+    @Override
     public void destroy() throws Exception {
 
     }
@@ -265,9 +276,13 @@ public class RpcAnnotationBeanPostProcessor extends InstantiationAwareBeanPostPr
                     for (RpcServiceExporter exporter : rpcServiceExporterMap.values()) {
                         exporter.start();
                     }
-                    // if servers exist, await to forbid springboot shutdown
-                    if (rpcServiceExporterMap.values().size() > 0) {
-                        new CountDownLatch(1).await();
+                    // if WebApplicationType is NONE, await to forbid springboot shutdown
+                    WebApplicationType webApplicationType = deduceFromApplicationContext(applicationContext.getClass());
+                    log.debug("WebApplicationType is: " + webApplicationType + ", applicationContext: " + applicationContext.getClass());
+                    if (webApplicationType.equals(WebApplicationType.NONE)) {
+                        if (rpcServiceExporterMap.values().size() > 0) {
+                            new CountDownLatch(1).await();
+                        }
                     }
                 } catch (Exception e) {
                     throw new RuntimeException(e);
@@ -279,6 +294,23 @@ public class RpcAnnotationBeanPostProcessor extends InstantiationAwareBeanPostPr
         }
     }
 
+    private WebApplicationType deduceFromApplicationContext(Class<?> applicationContextClass) {
+        if (isAssignable("org.springframework.web.context.WebApplicationContext", applicationContextClass)) {
+            return WebApplicationType.SERVLET;
+        } else {
+            return isAssignable("org.springframework.boot.web.reactive.context.ReactiveWebApplicationContext", applicationContextClass)
+                    ? WebApplicationType.REACTIVE : WebApplicationType.NONE;
+        }
+    }
+
+    private boolean isAssignable(String target, Class<?> type) {
+        try {
+            return ClassUtils.resolveClassName(target, (ClassLoader)null).isAssignableFrom(type);
+        } catch (Throwable var3) {
+            return false;
+        }
+    }
+
     @Override
     public int getOrder() {
         return Ordered.LOWEST_PRECEDENCE - 3;
@@ -287,8 +319,8 @@ public class RpcAnnotationBeanPostProcessor extends InstantiationAwareBeanPostPr
 
     private void processRpcServiceAnnotation(TrpcService rpcService, Object bean) {
         TrpcProperties properties = beanFactory.getBean(TrpcProperties.class);
-        if (properties == null) {
-            throw new RuntimeException("trpc properties is null");
+        if (properties == null || properties.getServer() == null) {
+            throw new RuntimeException("trpc properties or properties server is null");
         }
         Integer port = properties.getServer().getPort();
         RpcServiceExporter rpcServiceExporter = rpcServiceExporterMap.get(port);
